@@ -107,7 +107,7 @@
                             <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
                             <h5>CSV 파일을 선택하거나 여기에 드래그하세요</h5>
                             <p class="text-muted">지원 형식: CSV 파일</p>
-                            <input type="file" class="file-input" id="csvFile" name="file" accept=".csv" required>
+                            <input type="file" class="file-input" id="csvFile" name="file" accept=".csv" multiple required>
                             <button type="button" class="btn btn-upload" onclick="document.getElementById('csvFile').click()">
                                 <i class="fas fa-folder-open me-2"></i>파일 선택
                             </button>
@@ -118,6 +118,50 @@
                             <button type="submit" class="btn btn-upload" id="uploadBtn" style="display: none;">
                                 <i class="fas fa-upload me-2"></i>업로드
                             </button>
+                            
+                            <!-- 디버깅 버튼 -->
+                            <button type="button" class="btn btn-outline-info btn-sm ms-2" onclick="debugFirebase()">
+                                <i class="fas fa-bug me-1"></i>Firebase 디버그
+                            </button>
+                            
+                            <!-- 업로드 진행률 표시 -->
+                            <div id="uploadProgress" style="display: none;" class="mt-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-spinner fa-spin me-2"></i>파일 업로드 중...
+                                        </h6>
+                                        <div class="progress mb-3">
+                                            <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                                 id="progressBar" 
+                                                 role="progressbar" 
+                                                 style="width: 0%" 
+                                                 aria-valuenow="0" 
+                                                 aria-valuemin="0" 
+                                                 aria-valuemax="100">
+                                                0%
+                                            </div>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-file-csv me-1"></i>
+                                                    처리된 파일: <span id="processedFiles">0</span> / <span id="totalFiles">0</span>
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-database me-1"></i>
+                                                    총 데이터: <span id="totalJobs">0</span>개
+                                                </small>
+                                            </div>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted" id="currentFile">현재 처리 중: -</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -155,6 +199,10 @@ XYZ기업,영업직,오픈 예정,25/07/12,경기 성남시
         </div>
     </div>
 
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <script>
         // 페이지 로드 시 초기화
         document.addEventListener('DOMContentLoaded', function() {
@@ -162,22 +210,118 @@ XYZ기업,영업직,오픈 예정,25/07/12,경기 성남시
             const fileInfo = document.getElementById('fileInfo');
             const uploadBtn = document.getElementById('uploadBtn');
             const uploadArea = document.getElementById('uploadArea');
+            const uploadProgress = document.getElementById('uploadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const processedFilesSpan = document.getElementById('processedFiles');
+            const totalFilesSpan = document.getElementById('totalFiles');
+            const totalJobsSpan = document.getElementById('totalJobs');
+            const currentFileSpan = document.getElementById('currentFile');
             
             // 업로드 히스토리 표시
             displayUploadHistory();
             
+            // 진행률 업데이트 함수들
+            function updateProgress(processed, total, currentFileName = '') {
+                const progress = Math.round((processed / total) * 100);
+                progressBar.style.width = progress + '%';
+                progressBar.setAttribute('aria-valuenow', progress);
+                progressBar.textContent = progress + '%';
+                
+                processedFilesSpan.textContent = processed;
+                totalFilesSpan.textContent = total;
+                currentFileSpan.textContent = currentFileName ? `현재 처리 중: ${currentFileName}` : '현재 처리 중: -';
+            }
+            
+            function showUploadProgress() {
+                uploadProgress.style.display = 'block';
+                uploadBtn.style.display = 'none';
+                updateProgress(0, 0);
+            }
+            
+            function hideUploadProgress() {
+                uploadProgress.style.display = 'none';
+                uploadBtn.style.display = 'inline-block';
+            }
+            
+            // Firebase 디버깅 함수
+            async function debugFirebase() {
+                console.log('🔍 Firebase 디버깅 시작...');
+                
+                try {
+                    // Firebase 상태 확인
+                    if (typeof firebase === 'undefined') {
+                        alert('❌ Firebase SDK가 로드되지 않았습니다.');
+                        return;
+                    }
+                    
+                    if (firebase.apps.length === 0) {
+                        alert('❌ Firebase가 초기화되지 않았습니다.');
+                        return;
+                    }
+                    
+                    console.log('✅ Firebase 초기화됨');
+                    
+                    // Firestore 연결 확인
+                    const db = firebase.firestore();
+                    console.log('✅ Firestore 연결됨');
+                    
+                    // 간단한 테스트 데이터 업로드
+                    const testData = {
+                        company: '디버그테스트',
+                        title: '테스트직무',
+                        schedule: '테스트일정',
+                        reg_date: '25/07/11',
+                        address: '테스트주소',
+                        debug: true,
+                        timestamp: new Date()
+                    };
+                    
+                    console.log('📝 테스트 데이터:', testData);
+                    
+                    const docRef = await db.collection('debug').add(testData);
+                    console.log('✅ 테스트 데이터 업로드 성공! 문서 ID:', docRef.id);
+                    
+                    // 테스트 데이터 삭제
+                    await docRef.delete();
+                    console.log('🗑️ 테스트 데이터 삭제됨');
+                    
+                    alert('✅ Firebase 연결이 정상입니다!\n\n콘솔에서 자세한 로그를 확인하세요.');
+                    
+                } catch (error) {
+                    console.error('❌ Firebase 디버깅 오류:', error);
+                    alert(`❌ Firebase 오류:\n\n${error.message}\n\n콘솔에서 자세한 오류를 확인하세요.`);
+                }
+            }
+            
             // 파일 선택 시 파일명 표시
             fileInput.addEventListener('change', function(e) {
-                const file = e.target.files[0];
+                const files = e.target.files;
                 
-                if (file) {
-                    fileInfo.innerHTML = `
+                if (files.length > 0) {
+                    let fileInfoHTML = `
                         <div class="mt-3">
                             <i class="fas fa-file-csv fa-3x text-success mb-3"></i>
-                            <h5>선택된 파일: ${file.name}</h5>
-                            <p class="text-muted">파일 크기: ${(file.size / 1024).toFixed(2)} KB</p>
+                            <h5>선택된 파일: ${files.length}개</h5>
+                    `;
+                    
+                    let totalSize = 0;
+                    for (let i = 0; i < files.length; i++) {
+                        const file = files[i];
+                        totalSize += file.size;
+                        fileInfoHTML += `
+                            <div class="mb-2">
+                                <strong>${i + 1}. ${file.name}</strong>
+                                <span class="text-muted">(${(file.size / 1024).toFixed(2)} KB)</span>
+                            </div>
+                        `;
+                    }
+                    
+                    fileInfoHTML += `
+                            <p class="text-muted">총 크기: ${(totalSize / 1024).toFixed(2)} KB</p>
                         </div>
                     `;
+                    
+                    fileInfo.innerHTML = fileInfoHTML;
                     fileInfo.style.display = 'block';
                     uploadBtn.style.display = 'inline-block';
                 } else {
@@ -203,13 +347,21 @@ XYZ기업,영업직,오픈 예정,25/07/12,경기 성남시
                 
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
-                    const file = files[0];
-                    if (file.type === 'text/csv' || file.name.endsWith('.csv')) {
-                        fileInput.files = files;
-                        fileInput.dispatchEvent(new Event('change'));
-                    } else {
+                    // CSV 파일만 필터링
+                    const csvFiles = Array.from(files).filter(file => 
+                        file.type === 'text/csv' || file.name.endsWith('.csv')
+                    );
+                    
+                    if (csvFiles.length === 0) {
                         alert('CSV 파일만 업로드 가능합니다.');
+                        return;
                     }
+                    
+                    // FileList 객체 생성 (브라우저 호환성을 위해)
+                    const dataTransfer = new DataTransfer();
+                    csvFiles.forEach(file => dataTransfer.items.add(file));
+                    fileInput.files = dataTransfer.files;
+                    fileInput.dispatchEvent(new Event('change'));
                 }
             });
             
@@ -218,116 +370,180 @@ XYZ기업,영업직,오픈 예정,25/07/12,경기 성남시
             uploadForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 
-                const file = fileInput.files[0];
-                if (!file) {
+                const files = fileInput.files;
+                if (!files || files.length === 0) {
                     alert('파일을 선택해주세요.');
                     return;
                 }
                 
-                if (!file.name.endsWith('.csv')) {
+                // CSV 파일만 필터링
+                const csvFiles = Array.from(files).filter(file => 
+                    file.name.endsWith('.csv') || file.type === 'text/csv'
+                );
+                
+                if (csvFiles.length === 0) {
                     alert('CSV 파일만 업로드 가능합니다.');
                     return;
                 }
                 
-                // 파일 읽기 및 처리
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    try {
-                        const csv = e.target.result;
-                        console.log('CSV 내용:', csv); // 디버깅용
-                        
-                        const lines = csv.split('\n').filter(line => line.trim() !== '');
-                        console.log('분리된 라인:', lines); // 디버깅용
-                        
-                        if (lines.length < 2) {
-                            alert('CSV 파일에 데이터가 충분하지 않습니다. 헤더와 최소 1개의 데이터 행이 필요합니다.');
-                            return;
-                        }
-                        
-                        const headers = lines[0].split(',').map(h => h.trim());
-                        console.log('헤더:', headers); // 디버깅용
-                        
-                        // 필수 컬럼 확인
-                        const requiredColumns = ['회사명', '직무', '일정', '등록일/수정일', '주소'];
-                        const missingColumns = requiredColumns.filter(col => 
-                            !headers.some(header => header === col)
-                        );
-                        
-                        if (missingColumns.length > 0) {
-                            alert(`필수 컬럼이 누락되었습니다: ${missingColumns.join(', ')}\n\n필요한 컬럼: ${requiredColumns.join(', ')}`);
-                            return;
-                        }
-                        
-                        // CSV 데이터를 객체 배열로 변환
-                        const jobsData = [];
-                        for (let i = 1; i < lines.length; i++) {
-                            const line = lines[i].trim();
-                            if (line) {
-                                const values = line.split(',').map(v => v.trim());
-                                console.log(`라인 ${i} 값들:`, values); // 디버깅용
-                                
-                                if (values.length >= 5) {
-                                    jobsData.push({
-                                        company: values[0] || '',
-                                        title: values[1] || '',
-                                        schedule: values[2] || '',
-                                        reg_date: values[3] || '',
-                                        address: values[4] || ''
-                                    });
-                                } else {
-                                    console.warn(`라인 ${i}의 컬럼 수가 부족합니다:`, values);
-                                }
-                            }
-                        }
-                        
-                        console.log('파싱된 데이터:', jobsData); // 디버깅용
-                        
-                        if (jobsData.length === 0) {
+                // 업로드 진행률 표시 시작
+                showUploadProgress();
+                updateProgress(0, csvFiles.length);
+                
+                // 여러 파일 순차 처리
+                let allJobsData = [];
+                let processedFiles = 0;
+                let totalFiles = csvFiles.length;
+                
+                function processNextFile(index) {
+                    if (index >= csvFiles.length) {
+                        // 모든 파일 처리 완료
+                        if (allJobsData.length === 0) {
                             alert('유효한 데이터가 없습니다. CSV 파일 형식을 확인해주세요.');
                             return;
                         }
                         
-                        // LocalStorage에 저장
-                        localStorage.setItem('uploadedJobsData', JSON.stringify(jobsData));
+                        // Firebase에 업로드
+                        const uploadPromises = [];
+                        csvFiles.forEach((file, fileIndex) => {
+                            const fileData = allJobsData[fileIndex];
+                            if (fileData && fileData.length > 0) {
+                                uploadPromises.push(
+                                    firebaseDB.uploadJobs(fileData, file.name)
+                                );
+                            }
+                        });
                         
-                        // 데이터 개수 계산
-                        const dataCount = jobsData.length;
+                        Promise.all(uploadPromises).then(results => {
+                            const successCount = results.filter(r => r.success).length;
+                            const totalJobs = allJobsData.reduce((sum, data) => sum + data.length, 0);
+                            
+                            // 진행률 표시 숨기기
+                            hideUploadProgress();
+                            
+                            if (successCount > 0) {
+                                alert(`파일 업로드 성공!\n\n처리된 파일: ${successCount}/${totalFiles}개\n총 채용정보: ${totalJobs}개\n\n모든 기기에서 실시간으로 데이터를 확인할 수 있습니다.`);
+                                
+                                // 업로드 히스토리 저장
+                                const fileNames = csvFiles.map(file => file.name);
+                                const allJobs = allJobsData.flat();
+                                saveUploadHistory(fileNames, totalJobs, allJobs);
+                                
+                                // 파일 정보 초기화
+                                fileInput.value = '';
+                                fileInfo.style.display = 'none';
+                                
+                                // 업로드 히스토리 업데이트
+                                displayUploadHistory();
+                            } else {
+                                alert('모든 파일 업로드에 실패했습니다.');
+                            }
+                        }).catch(error => {
+                            console.error('Firebase 업로드 오류:', error);
+                            hideUploadProgress();
+                            alert('업로드 중 오류가 발생했습니다. Firebase 설정을 확인해주세요.');
+                        });
                         
-                        // 업로드 히스토리 저장
-                        saveUploadHistory(file.name, dataCount, jobsData);
-                        
-                        alert(`파일 업로드 성공! ${dataCount}개의 채용정보가 등록되었습니다.\n\n메인 페이지에서 새로운 데이터를 확인할 수 있습니다.`);
-                        
-                        // 파일 정보 초기화
-                        fileInput.value = '';
-                        fileInfo.style.display = 'none';
-                        uploadBtn.style.display = 'none';
-                        
-                        // 업로드 히스토리 업데이트
-                        displayUploadHistory();
-                        
-                    } catch (error) {
-                        console.error('파일 처리 오류:', error);
-                        alert(`파일 처리 중 오류가 발생했습니다.\n\n오류: ${error.message}`);
+                        return;
                     }
-                };
+                    
+                    const file = csvFiles[index];
+                    const reader = new FileReader();
+                    
+                    // 현재 처리 중인 파일명 표시
+                    updateProgress(processedFiles, totalFiles, file.name);
+                    
+                    reader.onload = function(e) {
+                        try {
+                            const csv = e.target.result;
+                            const lines = csv.split('\n').filter(line => line.trim() !== '');
+                            
+                            if (lines.length < 2) {
+                                console.warn(`파일 ${file.name}: 데이터가 충분하지 않습니다.`);
+                                allJobsData[index] = [];
+                                processNextFile(index + 1);
+                                return;
+                            }
+                            
+                            const headers = lines[0].split(',').map(h => h.trim());
+                            
+                            // 필수 컬럼 확인
+                            const requiredColumns = ['회사명', '직무', '일정', '등록일/수정일', '주소'];
+                            const missingColumns = requiredColumns.filter(col => 
+                                !headers.some(header => header === col)
+                            );
+                            
+                            if (missingColumns.length > 0) {
+                                console.warn(`파일 ${file.name}: 필수 컬럼 누락 - ${missingColumns.join(', ')}`);
+                                allJobsData[index] = [];
+                                processNextFile(index + 1);
+                                return;
+                            }
+                            
+                            // CSV 데이터를 객체 배열로 변환
+                            const jobsData = [];
+                            for (let i = 1; i < lines.length; i++) {
+                                const line = lines[i].trim();
+                                if (line) {
+                                    const values = line.split(',').map(v => v.trim());
+                                    
+                                    if (values.length >= 5) {
+                                        jobsData.push({
+                                            company: values[0] || '',
+                                            title: values[1] || '',
+                                            schedule: values[2] || '',
+                                            reg_date: values[3] || '',
+                                            address: values[4] || ''
+                                        });
+                                    }
+                                }
+                            }
+                            
+                            allJobsData[index] = jobsData;
+                            processedFiles++;
+                            
+                            // 진행률 업데이트
+                            updateProgress(processedFiles, totalFiles);
+                            
+                            // 총 데이터 개수 업데이트
+                            const currentTotalJobs = allJobsData.reduce((sum, data) => sum + (data ? data.length : 0), 0);
+                            totalJobsSpan.textContent = currentTotalJobs;
+                            
+                            processNextFile(index + 1);
+                            
+                        } catch (error) {
+                            console.error(`파일 ${file.name} 처리 오류:`, error);
+                            allJobsData[index] = [];
+                            processedFiles++;
+                            updateProgress(processedFiles, totalFiles);
+                            processNextFile(index + 1);
+                        }
+                    };
+                    
+                    reader.onerror = function() {
+                        console.error(`파일 ${file.name} 읽기 오류`);
+                        allJobsData[index] = [];
+                        processedFiles++;
+                        updateProgress(processedFiles, totalFiles);
+                        processNextFile(index + 1);
+                    };
+                    
+                    reader.readAsText(file, 'UTF-8');
+                }
                 
-                reader.readAsText(file, 'UTF-8');
-                
-                // 파일 읽기 오류 처리
-                reader.onerror = function() {
-                    alert('파일을 읽을 수 없습니다. 파일이 손상되었거나 지원되지 않는 형식일 수 있습니다.');
-                };
+                // 첫 번째 파일부터 처리 시작
+                processNextFile(0);
             });
         });
         
         // 업로드 히스토리 저장
-        function saveUploadHistory(fileName, dataCount, jobsData) {
+        function saveUploadHistory(fileNames, totalDataCount, allJobsData) {
             const uploadInfo = {
-                fileName: fileName,
+                fileNames: fileNames,
                 uploadDate: new Date().toLocaleString('ko-KR'),
-                dataCount: dataCount,
-                sampleData: jobsData.slice(0, 3) // 처음 3개 데이터만 저장
+                totalDataCount: totalDataCount,
+                fileCount: fileNames.length,
+                sampleData: allJobsData.slice(0, 6) // 처음 6개 데이터만 저장
             };
             
             localStorage.setItem('uploadHistory', JSON.stringify(uploadInfo));
@@ -344,19 +560,33 @@ XYZ기업,영업직,오픈 예정,25/07/12,경기 성남시
                     let historyHTML = `
                         <div class="mb-3">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <strong>파일명:</strong>
-                                <span class="text-primary">${info.fileName}</span>
+                                <strong>파일 개수:</strong>
+                                <span class="badge bg-primary">${info.fileCount}개</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-2">
                                 <strong>업로드일:</strong>
                                 <span class="text-muted">${info.uploadDate}</span>
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <strong>데이터 개수:</strong>
-                                <span class="badge bg-success">${info.dataCount}개</span>
+                                <strong>총 데이터:</strong>
+                                <span class="badge bg-success">${info.totalDataCount}개</span>
                             </div>
                         </div>
                     `;
+                    
+                    if (info.fileNames && info.fileNames.length > 0) {
+                        historyHTML += '<div class="border-top pt-3"><strong>업로드된 파일:</strong><ul class="list-unstyled mt-2">';
+                        info.fileNames.forEach((fileName, index) => {
+                            historyHTML += `
+                                <li class="mb-1">
+                                    <div class="small">
+                                        <span class="text-muted">${index + 1}. ${fileName}</span>
+                                    </div>
+                                </li>
+                            `;
+                        });
+                        historyHTML += '</ul></div>';
+                    }
                     
                     if (info.sampleData && info.sampleData.length > 0) {
                         historyHTML += '<div class="border-top pt-3"><strong>샘플 데이터:</strong><ul class="list-unstyled mt-2">';
