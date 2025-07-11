@@ -218,6 +218,10 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="firebase-config.js"></script>
     <script>
         // 기본 정적 데이터
         const defaultJobsData = [
@@ -244,18 +248,19 @@
             }
         ];
 
-        // LocalStorage에서 데이터 로드 또는 기본 데이터 사용
-        function getJobsData() {
-            const savedData = localStorage.getItem('uploadedJobsData');
-            if (savedData) {
-                try {
-                    return JSON.parse(savedData);
-                } catch (e) {
-                    console.error('저장된 데이터 파싱 오류:', e);
+        // Firebase에서 데이터 로드 또는 기본 데이터 사용
+        async function getJobsData() {
+            try {
+                const jobsData = await firebaseDB.loadJobs();
+                if (jobsData && jobsData.length > 0) {
+                    return jobsData;
+                } else {
                     return defaultJobsData;
                 }
+            } catch (error) {
+                console.error('Firebase 데이터 로드 오류:', error);
+                return defaultJobsData;
             }
-            return defaultJobsData;
         }
 
         // 페이지 로드 시 초기화
@@ -298,12 +303,12 @@
         });
 
         // 검색 실행
-        function performSearch(location) {
+        async function performSearch(location) {
             const searchResults = document.getElementById('searchResults');
             const resultCount = document.getElementById('resultCount');
             
             // 현재 데이터 가져오기
-            const currentJobsData = getJobsData();
+            const currentJobsData = await getJobsData();
             
             // 지역별 필터링
             const filteredJobs = currentJobsData.filter(job => 
