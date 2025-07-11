@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>소상공인의 오픈 동행</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'NanumGothic', '나눔고딕', sans-serif;
+            background: #1a1a1a;
+            min-height: 100vh;
+        }
+        
+        .main-container {
+            background: #ffffff;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .title-section {
+            background: #000000;
+            color: white;
+            border-radius: 20px 20px 0 0;
+            padding: 2rem;
+        }
+        
+        .hero-image {
+            max-width: 400px;
+            width: 100%;
+            height: auto;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+            margin-bottom: 1.5rem;
+        }
+        
+        .search-container {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 2rem;
+            margin: 2rem 0;
+        }
+        
+        .search-input {
+            border: 2px solid #e9ecef;
+            border-radius: 10px;
+            padding: 0.75rem 1rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .search-input:focus {
+            border-color: #0055aa;
+            box-shadow: 0 0 0 2px rgba(0, 85, 170, 0.2);
+            outline: none;
+            background: white;
+        }
+        
+        .btn-gradient {
+            background: #0055aa;
+            border: none;
+            border-radius: 15px;
+            padding: 0.8rem 1.5rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: white;
+        }
+        
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 85, 170, 0.3);
+            background: #004080;
+            color: white;
+        }
+        
+        .job-card {
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+        
+        .job-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(0, 85, 170, 0.15);
+            border-left: 4px solid #0055aa;
+        }
+        
+        .company-name {
+            color: #0055aa;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .loading-spinner {
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #0055aa;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .result-count {
+            background: #0055aa;
+            color: white;
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+        }
+        
+        .error-message {
+            background: #f8f9fa;
+            border: 1px solid #0055aa;
+            color: #0055aa;
+            border-radius: 10px;
+            padding: 1rem;
+        }
+        
+        .address-info {
+            background: #f8f9fa;
+            border: 1px solid #0055aa;
+            color: #0055aa;
+            border-radius: 8px;
+            padding: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .title-icon {
+            color: #0055aa;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="main-container">
+                    <!-- Title Section -->
+                    <div class="title-section text-center position-relative">
+                        <!-- 관리자 버튼 -->
+                        <div class="position-absolute top-0 end-0 p-3">
+                            <a href="admin_login.html" class="btn btn-outline-light btn-sm">
+                                <i class="fas fa-cog me-1"></i>관리자
+                            </a>
+                        </div>
+                        
+                        <!-- 히어로 이미지 -->
+                        <div class="mb-4">
+                            <img src="https://media.istockphoto.com/id/2165069850/ko/%EC%82%AC%EC%A7%84/%ED%95%B4%EC%A7%88%EB%85%98-%ED%95%98%EB%8A%98%EC%9D%84-%EB%B0%B0%EA%B2%BD%EC%9C%BC%EB%A1%9C-%EC%86%90%EC%9D%84-%EC%9E%A1%EA%B3%A0-%EC%9E%88%EB%8A%94-%EC%95%84%EC%9D%B4%EB%93%A4%EC%9D%98-%EC%8B%A4%EB%A3%A8%EC%97%A3.jpg?s=612x612&w=0&k=20&c=Su32YPBpC6Md54PKsQFMjuwI6nXXdcZHg4pkQneGRRM=" alt="소상공인 오픈 동행" class="hero-image">
+                        </div>
+                        
+                        <h1 class="display-4 fw-bold mb-3">
+                            <div class="d-flex flex-column align-items-center justify-content-center">
+                                <span style="font-size: 3.5rem; color: #ffffff; font-weight: 800; text-shadow: 3px 3px 6px rgba(0,0,0,0.6); letter-spacing: 2px;">소상공인의</span>
+                                <span style="font-size: 4.5rem; color: #ffffff; font-weight: 800; text-shadow: 3px 3px 6px rgba(0,0,0,0.6); letter-spacing: 2px; margin-top: 5px;">오픈 동행</span>
+                            </div>
+                        </h1>
+                        <p class="lead mb-0">
+                            소상공인의 첫시작<br>
+                            우리가 함께 합니다.<br>
+                            인터넷, TV, CCTV, 전화, 포스기까지 ONE-STEP
+                        </p>
+                    </div>
+
+                    <!-- Search Section -->
+                    <div class="container-fluid py-4">
+                        <div class="row justify-content-center">
+                            <div class="col-md-8">
+                                <div class="search-container text-center">
+                                    <div class="form-floating mb-3">
+                                        <input type="text" id="location" class="form-control search-input" placeholder="지역명 입력">
+                                        <label for="location">지역명 입력</label>
+                                    </div>
+                                    <div class="text-center">
+                                        <button id="searchBtn" class="btn btn-gradient btn-lg px-4 py-2 text-white fw-semibold">
+                                            <i class="fas fa-search me-2"></i>
+                                            검색하기
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Results Section -->
+                    <div class="container-fluid pb-4">
+                        <div class="row justify-content-center">
+                            <div class="col-lg-10">
+                                <!-- Loading Status -->
+                                <div id="loadingStatus" class="text-center mb-4">
+                                    <div class="loading-spinner mx-auto mb-2"></div>
+                                    <p class="text-muted">오픈 정보를 검색하고 있습니다...</p>
+                                </div>
+
+                                <!-- Result Count -->
+                                <div class="text-center mb-4">
+                                    <span id="resultCount" class="result-count">총 0개의 오픈 정보를 찾았습니다</span>
+                                </div>
+
+                                <!-- Search Results -->
+                                <div id="searchResults">
+                                    <!-- 검색 결과가 여기에 표시됩니다 -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 기본 정적 데이터
+        const defaultJobsData = [
+            {
+                company: "ABC회사",
+                title: "매장직",
+                schedule: "오픈 예정",
+                reg_date: "25/07/11",
+                address: "서울 강남구"
+            },
+            {
+                company: "XYZ기업",
+                title: "영업직",
+                schedule: "오픈 예정",
+                reg_date: "25/07/12",
+                address: "경기 성남시"
+            },
+            {
+                company: "샘플회사",
+                title: "관리직",
+                schedule: "오픈 예정",
+                reg_date: "25/07/13",
+                address: "서울 서초구"
+            }
+        ];
+
+        // LocalStorage에서 데이터 로드 또는 기본 데이터 사용
+        function getJobsData() {
+            const savedData = localStorage.getItem('uploadedJobsData');
+            if (savedData) {
+                try {
+                    return JSON.parse(savedData);
+                } catch (e) {
+                    console.error('저장된 데이터 파싱 오류:', e);
+                    return defaultJobsData;
+                }
+            }
+            return defaultJobsData;
+        }
+
+        // 페이지 로드 시 초기화
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchBtn = document.getElementById('searchBtn');
+            const locationInput = document.getElementById('location');
+            const searchResults = document.getElementById('searchResults');
+            const loadingStatus = document.getElementById('loadingStatus');
+            const resultCount = document.getElementById('resultCount');
+            
+            // 로딩 상태 숨기기
+            loadingStatus.style.display = 'none';
+            
+            // 검색 버튼 클릭 이벤트
+            searchBtn.addEventListener('click', function() {
+                const location = locationInput.value.trim();
+                
+                if (!location) {
+                    alert('지역명을 입력해주세요.');
+                    return;
+                }
+                
+                // 로딩 상태 표시
+                loadingStatus.style.display = 'block';
+                searchResults.innerHTML = '';
+                
+                // 검색 실행 (시뮬레이션)
+                setTimeout(() => {
+                    performSearch(location);
+                    loadingStatus.style.display = 'none';
+                }, 1000);
+            });
+            
+            // 엔터키 검색
+            locationInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    searchBtn.click();
+                }
+            });
+        });
+
+        // 검색 실행
+        function performSearch(location) {
+            const searchResults = document.getElementById('searchResults');
+            const resultCount = document.getElementById('resultCount');
+            
+            // 현재 데이터 가져오기
+            const currentJobsData = getJobsData();
+            
+            // 지역별 필터링
+            const filteredJobs = currentJobsData.filter(job => 
+                job.address.includes(location)
+            );
+            
+            // 전역 변수에 현재 검색 결과 저장
+            currentSearchResults = filteredJobs;
+            
+            // 결과 개수 업데이트
+            resultCount.textContent = `총 ${filteredJobs.length}개의 오픈 정보를 찾았습니다`;
+            
+            // 검색 결과 표시
+            if (filteredJobs.length === 0) {
+                searchResults.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">검색 결과가 없습니다</h5>
+                        <p class="text-muted">다른 지역명으로 검색해보세요.</p>
+                    </div>
+                `;
+            } else {
+                let resultsHTML = '';
+                filteredJobs.forEach((job, index) => {
+                    resultsHTML += `
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card job-card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title company-name">${job.company}</h5>
+                                    <p class="card-text">
+                                        <strong>직무:</strong> ${job.title}<br>
+                                        <strong>일정:</strong> ${job.schedule}<br>
+                                        <strong>등록일:</strong> ${job.reg_date}
+                                    </p>
+                                    <div class="address-info">
+                                        <i class="fas fa-map-marker-alt me-1"></i>${job.address}
+                                    </div>
+                                    <div class="mt-3">
+                                        <button class="btn btn-outline-primary btn-sm" onclick="copyJobInfoByIndex(${index})">
+                                            <i class="fas fa-copy me-1"></i>복사
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                searchResults.innerHTML = `<div class="row">${resultsHTML}</div>`;
+            }
+        }
+        
+        // 전역 변수로 현재 검색 결과 저장
+        let currentSearchResults = [];
+        
+        // 인덱스로 회사 정보를 클립보드에 복사하는 함수
+        function copyJobInfoByIndex(index) {
+            const job = currentSearchResults[index];
+            
+            if (job) {
+                const jobInfo = `회사명: ${job.company}\n직무: ${job.title}\n일정: ${job.schedule}\n등록일: ${job.reg_date}\n주소: ${job.address}`;
+                
+                // 텍스트를 클립보드에 복사
+                if (navigator.clipboard && window.isSecureContext) {
+                    // 최신 브라우저용
+                    navigator.clipboard.writeText(jobInfo).then(function() {
+                        showCopySuccess();
+                    }).catch(function(err) {
+                        console.error('클립보드 복사 실패:', err);
+                        fallbackCopyTextToClipboard(jobInfo);
+                    });
+                } else {
+                    // 구형 브라우저용
+                    fallbackCopyTextToClipboard(jobInfo);
+                }
+            }
+        }
+        
+        // 구형 브라우저용 복사 함수
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    showCopySuccess();
+                } else {
+                    alert('복사에 실패했습니다.');
+                }
+            } catch (err) {
+                console.error('복사 실패:', err);
+                alert('복사에 실패했습니다.');
+            }
+            
+            document.body.removeChild(textArea);
+        }
+        
+        // 복사 성공 메시지 표시
+        function showCopySuccess() {
+            // 임시 알림 메시지 생성
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #28a745;
+                color: white;
+                padding: 10px 20px;
+                border-radius: 5px;
+                z-index: 9999;
+                font-size: 14px;
+                box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            `;
+            notification.textContent = '클립보드에 복사되었습니다!';
+            document.body.appendChild(notification);
+            
+            // 2초 후 제거
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 2000);
+        }
+    </script>
+</body>
+</html> 
